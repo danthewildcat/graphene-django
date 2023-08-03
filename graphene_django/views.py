@@ -12,6 +12,7 @@ from django.views.generic import View
 from graphql import ExecutionResult, OperationType, execute, get_operation_ast, parse
 from graphql.error import GraphQLError
 from graphql.execution.middleware import MiddlewareManager
+from graphql.language import OperationDefinitionNode
 from graphql.validation import validate
 
 from graphene import Schema
@@ -302,7 +303,21 @@ class GraphQLView(View):
 
         op_error = None
         if not operation_ast:
-            op_error = "Must provide a valid operation."
+            ops_count = len(
+                [
+                    x
+                    for x in document.definitions
+                    if isinstance(x, OperationDefinitionNode)
+                ]
+            )
+            if ops_count > 1:
+                op_error = (
+                    "Must specify `operation_name` when multiple operations are defined"
+                )
+            elif operation_name:
+                op_error = f"Unknown operation named '{operation_name}'."
+            else:
+                op_error = "Must provide a valid operation."
         elif operation_ast.operation == OperationType.SUBSCRIPTION:
             op_error = "The 'subscription' operation is not supported."
 
